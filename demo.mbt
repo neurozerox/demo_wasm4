@@ -6,7 +6,7 @@ pub struct Player {
 
 priv struct Enemy {
   mut x : Int
-  mut y : Int
+  y : Int
 }
 
 priv struct GameState {
@@ -60,41 +60,76 @@ pub fn update() -> Unit {
   let player_h = 16 // Alto del jugador
   let coin_w = 8 // Ancho de moneda
   let coin_h = 8 // Alto de moneda
-
-  // Declara el estado del mando SÓLO UNA VEZ al inicio de update()
   let gamepad = @wasm4.get_gamepad(index=1)
 
-    // lógica de movimiento del cuadrado
-  if gamepad.button_right && jugador.x + player_w < screen_max {
-    jugador.x += estado.velocidad
-  } else if gamepad.button_down && jugador.y + player_h < screen_max {
-    jugador.y += estado.velocidad
-  } else if gamepad.button_left && jugador.x >= 0 {
-    jugador.x -= estado.velocidad
-  } else if gamepad.button_up && jugador.y >= 0 {
-    jugador.y -= estado.velocidad
+
+  if game_flags.is_playing {
+    // --- LÓGICA DE MOVIMIENTO ENEMIGO (Movimiento simple hacia la izquierda) ---
+    // El enemigo se moverá a una velocidad fija de 2px
+    enemigo.x -= 2
+    // Si el enemigo sale por la izquierda, reaparece a la derecha (Looping)
+    if enemigo.x < -20 { // -20 para que salga completamente
+      enemigo.x = screen_max
+    }
+
+    // lógica de movimiento del jugador
+    if gamepad.button_right && jugador.x + player_w < screen_max {
+      jugador.x += estado.velocidad
+    } else if gamepad.button_down && jugador.y + player_h < screen_max {
+      jugador.y += estado.velocidad
+    } else if gamepad.button_left && jugador.x >= 0 {
+      jugador.x -= estado.velocidad
+    } else if gamepad.button_up && jugador.y >= 0 {
+      jugador.y -= estado.velocidad
+    }
+
+    // Lógica de colisión monedas
+    if jugador.x < moneda.x + coin_w && 
+      jugador.x + player_w > moneda.x && 
+      jugador.y < moneda.y + coin_w && 
+      jugador.y + player_w > moneda.y {
+      estado.velocidad += 1  
+      estado.puntaje += 1
+      moneda.x = get_safe_random_coord(rand_state.seed, coin_w)
+      rand_state.seed = moneda.x
+      moneda.y = get_safe_random_coord(rand_state.seed, coin_h)
+      rand_state.seed = moneda.y
+    }
+
+    // --- LÓGICA DE COLISIÓN CON ENEMIGO (Game Over) ---
+    let enemy_w = 12 // Asumimos un tamaño de enemigo
+    let enemy_h = 12 
+
+    if jugador.x < enemigo.x + enemy_w && 
+       jugador.x + player_w > enemigo.x && 
+       jugador.y < enemigo.y + enemy_h && 
+       jugador.y + player_h > enemigo.y {
+      
+      game_flags.is_playing = false // ¡Game Over!
+    }
+
+    // --- DIBUJO ---
+    @wasm4.set_draw_colors(2)
+    @wasm4.rect(jugador.x, jugador.y, player_w, player_h)
+    
+    @wasm4.set_draw_colors(4) // Nuevo color para el enemigo (ejemplo)
+    @wasm4.rect(enemigo.x, enemigo.y, enemy_w, enemy_h) 
+
+    @wasm4.set_draw_colors(3)
+    @wasm4.rect(moneda.x, moneda.y, coin_w, coin_h) 
+
+    let score_text = "PUNTAJE: " + estado.puntaje.to_string()
+    @wasm4.set_draw_colors(4)
+    @wasm4.text(score_text, 5, 5) 
+
+  } else {
+    // PANTALLA DE GAME OVER
+    @wasm4.set_draw_colors(1)
+    @wasm4.text("GAME OVER!", 40, 70)
+    
+    @wasm4.set_draw_colors(3)
+    let final_score = "Puntaje: " + estado.puntaje.to_string()
+    @wasm4.text(final_score, 40, 90)
   }
-
-  // Lógica de colisión
-  if jugador.x < moneda.x + coin_w && 
-     jugador.x + player_w > moneda.x && 
-     jugador.y < moneda.y + coin_w && 
-     jugador.y + player_w > moneda.y {
-    estado.velocidad += 1  
-    estado.puntaje += 1
-    moneda.x = get_safe_random_coord(rand_state.seed, coin_w)
-    rand_state.seed = moneda.x
-    moneda.y = get_safe_random_coord(rand_state.seed, coin_h)
-    rand_state.seed = moneda.y
-  }
-
-  @wasm4.set_draw_colors(2)
-  @wasm4.rect(jugador.x, jugador.y, player_w, player_h)
-  @wasm4.set_draw_colors(3)
-  @wasm4.rect(moneda.x, moneda.y, coin_w, coin_h) 
-
-  let score_text = "PUNTAJE: " + estado.puntaje.to_string()
-  @wasm4.set_draw_colors(4)
-  @wasm4.text(score_text, 5, 5) 
 
 }
