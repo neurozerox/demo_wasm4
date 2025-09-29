@@ -6,7 +6,7 @@ pub struct Player {
 
 priv struct Enemy {
   mut x : Int
-  y : Int
+  mut y : Int
 }
 
 priv struct GameState {
@@ -49,6 +49,22 @@ fn get_safe_random_coord(seed: Int, sprite_size: Int) -> Int {
     let max_coord = screen_max - sprite_size
     // Genera un número aleatorio y asegura que no exceda el límite máximo de dibujo.
     next_random(seed) % (max_coord + 1)
+}
+
+//Reiniciar juego
+fn reset_game() -> Unit {
+    // Reinicia todas las variables mutables a sus valores iniciales
+    jugador.x = 0
+    jugador.y = 0
+    
+    enemigo.x = 150
+    enemigo.y = 70
+    
+    estado.puntaje = 0
+    estado.velocidad = 1
+    
+    // Y lo más importante: ¡Activa el juego de nuevo!
+    game_flags.is_playing = true
 }
 
 
@@ -130,6 +146,20 @@ pub fn update() -> Unit {
     @wasm4.set_draw_colors(3)
     let final_score = "Puntaje: " + estado.puntaje.to_string()
     @wasm4.text(final_score, 40, 90)
+
+
+    @wasm4.set_draw_colors(4)
+    @wasm4.text("Presiona Z", 40, 110)
+    @wasm4.text("para reiniciar", 25, 120)
+
+    // --- LÓGICA DE REINICIO ---
+    let gamepad = @wasm4.get_gamepad(index=1)
+    
+    // Verifica si se presiona el botón 'Z' (BTN2/BUTTON_X/BUTTON_1 en la API)
+    if gamepad.button_2 { // button_2 corresponde a 'Z' en WASM-4
+        reset_game() // Llama a la función de reinicio
+    }
+
   }
 
 }
