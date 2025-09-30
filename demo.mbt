@@ -19,6 +19,7 @@ priv struct Stats {
 }
 priv struct RandomSeed {
   mut seed : Int
+  mut frame_counter : Int
 }
 priv struct GameStateFlags { // Para manejar el estado de la partida
   mut is_playing : Bool
@@ -29,7 +30,7 @@ let jugador : Player = { x: 0, y: 0 }
 let enemigo : Enemy = { x: 150, y: 70 }
 let moneda : GameState = { x: 100, y: 50 }
 let estado : Stats = { puntaje: 0, velocidad: 1 }
-let rand_state : RandomSeed = { seed: 123 } // Inicializa la semilla
+let rand_state : RandomSeed = { seed: 123, frame_counter: 0 } // Inicializa la semilla
 let game_flags : GameStateFlags = { is_playing: true }
 
 // FUNCIONES
@@ -77,7 +78,6 @@ pub fn update() -> Unit {
   let coin_w = 8 // Ancho de moneda
   let coin_h = 8 // Alto de moneda
   let gamepad = @wasm4.get_gamepad(index=1)
-
 
   if game_flags.is_playing {
     // --- LÓGICA DE MOVIMIENTO ENEMIGO (Movimiento simple hacia la izquierda) ---
@@ -148,9 +148,19 @@ pub fn update() -> Unit {
     @wasm4.text(final_score, 40, 90)
 
 
-    @wasm4.set_draw_colors(4)
-    @wasm4.text("Presiona Z", 40, 110)
-    @wasm4.text("para reiniciar", 25, 120)
+    // --- LÓGICA DE PARPADEO ---
+    rand_state.frame_counter += 1 // Suma 1 cada frame (60 veces por segundo)
+
+      // Resetea el contador para evitar overflow (no estrictamente necesario pero es buena práctica)
+    if rand_state.frame_counter > 90 { 
+        rand_state.frame_counter = 0 
+    }
+
+    // Si el contador de frames dividido por 30 (medio segundo) tiene un resto menor a 15 (un cuarto de segundo), dibujar.
+    if rand_state.frame_counter % 90 < 45 { 
+      @wasm4.text("Presiona Z", 40, 110)
+      @wasm4.text("para reiniciar", 25, 120)
+    }
 
     // --- LÓGICA DE REINICIO ---
     let gamepad = @wasm4.get_gamepad(index=1)
