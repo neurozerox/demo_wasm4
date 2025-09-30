@@ -7,6 +7,7 @@ pub struct Player {
 priv struct Enemy {
   mut x : Int
   mut y : Int
+  mut dir_x : Int
   mut dir_y : Int
 }
 
@@ -28,7 +29,7 @@ priv struct GameStateFlags { // Para manejar el estado de la partida
 
 let screen_max = 160
 let jugador : Player = { x: 0, y: 0 }
-let enemigo : Enemy = { x: 150, y: 70, dir_y: 1 }
+let enemigo : Enemy = { x: 150, y: 70, dir_x: -1, dir_y: 1 }
 let moneda : GameState = { x: 100, y: 50 }
 let estado : Stats = { puntaje: 0, velocidad: 1 }
 let rand_state : RandomSeed = { seed: 123, frame_counter: 0 } // Inicializa la semilla
@@ -82,23 +83,34 @@ pub fn update() -> Unit {
 
   if game_flags.is_playing {
     // --- LÓGICA DE MOVIMIENTO ENEMIGO (Movimiento simple hacia la izquierda) ---
-    // El enemigo se moverá a una velocidad fija de 2px
-    enemigo.x -= 2
-    // Si el enemigo sale por la izquierda, reaparece a la derecha (Looping)
-    if enemigo.x < -20 { // -20 para que salga completamente
-      enemigo.x = screen_max
+    // 1. MOVIMIENTO HORIZONTAL Y REBOTE
+    let current_player_speed = estado.velocidad
+    // Hacemos que la velocidad horizontal sea 1 unidad mayor que la del jugador.
+    let enemy_horizontal_speed = current_player_speed + 1 
+    let enemy_w = 12 // Asumimos un tamaño de enemigo
+
+    // Aplica el movimiento: (posición += dirección * velocidad)
+    enemigo.x += enemigo.dir_x * enemy_horizontal_speed 
+
+    // Lógica de REBOTE HORIZONTAL
+    if enemigo.x + enemy_w >= screen_max {
+      enemigo.dir_x = -1 // Toca el borde derecho, ahora va a la IZQUIERDA
+    } else if enemigo.x <= 0 {
+      enemigo.dir_x = 1  // Toca el borde izquierdo, ahora va a la DERECHA
     }
 
-    let enemy_speed_y = 1 // Velocidad vertical (más lento que horizontal)
-    let enemy_h = 12 // Altura del sprite del enemigo
-    
-    enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica la dirección y velocidad
 
-    // Comprueba límites y revierte la dirección
+    // 2. MOVIMIENTO VERTICAL (ZIG-ZAG)
+    let enemy_speed_y = 1
+    let enemy_h = 12 
+    
+    enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica el zig-zag
+    
+    // Lógica de REBOTE VERTICAL (Tu código ya hacía esto)
     if enemigo.y + enemy_h >= screen_max {
-      enemigo.dir_y = -1 // Toca el fondo, ahora va ARRIBA
+      enemigo.dir_y = -1 
     } else if enemigo.y <= 0 {
-      enemigo.dir_y = 1  // Toca el techo, ahora va ABAJO
+      enemigo.dir_y = 1
     }
 
     // lógica de movimiento del jugador
