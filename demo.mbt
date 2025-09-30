@@ -7,6 +7,7 @@ pub struct Player {
 priv struct Enemy {
   mut x : Int
   mut y : Int
+  mut dir_y : Int
 }
 
 priv struct GameState {
@@ -27,7 +28,7 @@ priv struct GameStateFlags { // Para manejar el estado de la partida
 
 let screen_max = 160
 let jugador : Player = { x: 0, y: 0 }
-let enemigo : Enemy = { x: 150, y: 70 }
+let enemigo : Enemy = { x: 150, y: 70, dir_y: 1 }
 let moneda : GameState = { x: 100, y: 50 }
 let estado : Stats = { puntaje: 0, velocidad: 1 }
 let rand_state : RandomSeed = { seed: 123, frame_counter: 0 } // Inicializa la semilla
@@ -86,6 +87,18 @@ pub fn update() -> Unit {
     // Si el enemigo sale por la izquierda, reaparece a la derecha (Looping)
     if enemigo.x < -20 { // -20 para que salga completamente
       enemigo.x = screen_max
+    }
+
+    let enemy_speed_y = 1 // Velocidad vertical (más lento que horizontal)
+    let enemy_h = 12 // Altura del sprite del enemigo
+    
+    enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica la dirección y velocidad
+
+    // Comprueba límites y revierte la dirección
+    if enemigo.y + enemy_h >= screen_max {
+      enemigo.dir_y = -1 // Toca el fondo, ahora va ARRIBA
+    } else if enemigo.y <= 0 {
+      enemigo.dir_y = 1  // Toca el techo, ahora va ABAJO
     }
 
     // lógica de movimiento del jugador
