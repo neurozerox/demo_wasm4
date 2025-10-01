@@ -82,10 +82,9 @@ pub fn update() -> Unit {
   let gamepad = @wasm4.get_gamepad(index=1)
 
   if game_flags.is_playing {
-    // --- LÓGICA DE MOVIMIENTO ENEMIGO (Movimiento simple hacia la izquierda) ---
-    // 1. MOVIMIENTO HORIZONTAL Y REBOTE
+
+    // 1. MOVIMIENTO HORIZONTAL Y REBOTE (SUAVE)
     let current_player_speed = estado.velocidad
-    // Hacemos que la velocidad horizontal sea 1 unidad mayor que la del jugador.
     let enemy_horizontal_speed = current_player_speed + 1 
     let enemy_w = 12 // Asumimos un tamaño de enemigo
 
@@ -95,22 +94,31 @@ pub fn update() -> Unit {
     // Lógica de REBOTE HORIZONTAL
     if enemigo.x + enemy_w >= screen_max {
       enemigo.dir_x = -1 // Toca el borde derecho, ahora va a la IZQUIERDA
+      // DESVÍO VERTICAL LEVE: Inyecta un pequeño cambio aleatorio en Y.
+      // Generamos un número (ej. 0 a 7) y lo sumamos a Y.
+      let offset = next_random(rand_state.seed) % 8
+      rand_state.seed = offset // Actualiza la semilla
+      enemigo.y += offset
     } else if enemigo.x <= 0 {
       enemigo.dir_x = 1  // Toca el borde izquierdo, ahora va a la DERECHA
+      // DESVÍO VERTICAL LEVE: Inyecta un pequeño cambio aleatorio en Y.
+      let offset = next_random(rand_state.seed) % 8
+      rand_state.seed = offset
+      enemigo.y += offset
     }
 
 
-    // 2. MOVIMIENTO VERTICAL (ZIG-ZAG)
+    // 2. MOVIMIENTO VERTICAL (ZIG-ZAG) Y REBOTE PURO
     let enemy_speed_y = 1
     let enemy_h = 12 
     
     enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica el zig-zag
-    
-    // Lógica de REBOTE VERTICAL (Tu código ya hacía esto)
+
+    // Lógica de REBOTE VERTICAL CON RUIDO ALEATORIO
     if enemigo.y + enemy_h >= screen_max {
-      enemigo.dir_y = -1 
+      enemigo.dir_y = -1 // Toca el fondo, ahora va ARRIBA
     } else if enemigo.y <= 0 {
-      enemigo.dir_y = 1
+      enemigo.dir_y = 1  // Toca el techo, ahora va ABAJO
     }
 
     // lógica de movimiento del jugador
