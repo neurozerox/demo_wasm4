@@ -1,5 +1,5 @@
 // DECLARACIONES
-pub struct Player {
+priv struct Player {
   mut x : Int
   mut y : Int
 }
@@ -25,6 +25,12 @@ priv struct RandomSeed {
 }
 priv struct GameStateFlags { // Para manejar el estado de la partida
   mut is_playing : Bool
+}
+
+priv struct Sprite {
+  data : FixedArray[Byte]   // MoonBit usa 'Bytes' para arrays de datos crudos (como b"...")
+  width : Int
+  height : Int
 }
 
 let screen_max = 160
@@ -71,6 +77,34 @@ fn reset_game() -> Unit {
 }
 
 
+// --- DEFINICIÓN DE SPRITES (BITMAPS) ---
+let player_sprite : Sprite = {
+  data: [
+    0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01,
+    0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01,
+    0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00, 0x00, 0x01,
+    0xff, 0xff, 0xff, 0xff
+  ], // 64 bytes total
+  width: 16,
+  height: 16,
+}
+
+let enemy_sprite : Sprite = {
+  data: [
+    0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81
+  ], // 16 bytes total
+  width: 8,
+  height: 8,
+}
+
+let coin_sprite : Sprite = {
+  data: [
+     0x00, 0x3c, 0x42, 0x42, 0x42, 0x42, 0x3c, 0x00
+  ], // 16 bytes total
+  width: 8,
+  height: 8,
+}
+
 // CUERPO
 pub fn start() -> Unit {
 }
@@ -80,13 +114,15 @@ pub fn update() -> Unit {
   let coin_w = 8 // Ancho de moneda
   let coin_h = 8 // Alto de moneda
   let gamepad = @wasm4.get_gamepad(index=1)
+  let enemy_w = 8 // <-- ¡CAMBIA A 8! (para coincidir con el sprite 8x8)
+  let enemy_h = 8 // <-- ¡CAMBIA A 8! 
+
 
   if game_flags.is_playing {
 
     // 1. MOVIMIENTO HORIZONTAL Y REBOTE (SUAVE)
     let current_player_speed = estado.velocidad
     let enemy_horizontal_speed = current_player_speed + 1 
-    let enemy_w = 12 // Asumimos un tamaño de enemigo
 
     // Aplica el movimiento: (posición += dirección * velocidad)
     enemigo.x += enemigo.dir_x * enemy_horizontal_speed 
@@ -110,7 +146,6 @@ pub fn update() -> Unit {
 
     // 2. MOVIMIENTO VERTICAL (ZIG-ZAG) Y REBOTE PURO
     let enemy_speed_y = 1
-    let enemy_h = 12 
     
     enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica el zig-zag
 
@@ -146,9 +181,6 @@ pub fn update() -> Unit {
     }
 
     // --- LÓGICA DE COLISIÓN CON ENEMIGO (Game Over) ---
-    let enemy_w = 12 // Asumimos un tamaño de enemigo
-    let enemy_h = 12 
-
     if jugador.x < enemigo.x + enemy_w && 
        jugador.x + player_w > enemigo.x && 
        jugador.y < enemigo.y + enemy_h && 
@@ -158,15 +190,39 @@ pub fn update() -> Unit {
     }
 
     // --- DIBUJO ---
-    @wasm4.set_draw_colors(2)
-    @wasm4.rect(jugador.x, jugador.y, player_w, player_h)
+    //@wasm4.set_draw_colors(2)
+    //@wasm4.rect(jugador.x, jugador.y, player_w, player_h)
     
-    @wasm4.set_draw_colors(4) // Nuevo color para el enemigo (ejemplo)
-    @wasm4.rect(enemigo.x, enemigo.y, enemy_w, enemy_h) 
+    //@wasm4.set_draw_colors(4) // Nuevo color para el enemigo (ejemplo)
+    //@wasm4.rect(enemigo.x, enemigo.y, enemy_w, enemy_h) 
 
-    @wasm4.set_draw_colors(3)
-    @wasm4.rect(moneda.x, moneda.y, coin_w, coin_h) 
+    //@wasm4.set_draw_colors(3)
+    //@wasm4.rect(moneda.x, moneda.y, coin_w, coin_h) 
 
+    // --- DIBUJO CON BLIT ---
+    let blit_flag_none : @wasm4.BlitFlag = {
+      one_bit_per_pixel: true, // Asumiendo que es false por defecto
+      flip_x: false,
+      flip_y: false,
+      rotate: false,
+    }
+
+    // 1. Dibuja el JUGADOR
+    @wasm4.set_draw_colors(2)
+    let player_obj = @wasm4.sprite(player_sprite.data)
+    player_obj.blit(jugador.x, jugador.y, player_sprite.width, player_sprite.height, blit_flag_none)
+    
+    // 2. Dibuja el ENEMIGO
+    @wasm4.set_draw_colors(4)
+    let enemy_obj = @wasm4.sprite(enemy_sprite.data)
+    enemy_obj.blit(enemigo.x, enemigo.y, enemy_sprite.width, enemy_sprite.height, blit_flag_none) 
+
+    // 3. Dibuja la MONEDA
+    @wasm4.set_draw_colors(3) 
+    let coin_obj = @wasm4.sprite(coin_sprite.data)
+    coin_obj.blit(moneda.x, moneda.y, coin_sprite.width, coin_sprite.height, blit_flag_none)
+
+    //TEXTO PUNTAJE
     let score_text = "PUNTAJE: " + estado.puntaje.to_string()
     @wasm4.set_draw_colors(4)
     @wasm4.text(score_text, 5, 5) 
