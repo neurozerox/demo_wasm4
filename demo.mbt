@@ -18,6 +18,7 @@ priv struct GameState {
 priv struct Stats {
   mut puntaje : Int
   mut velocidad : Int
+  mut timer : Int
 }
 priv struct RandomSeed {
   mut seed : Int
@@ -37,7 +38,8 @@ let screen_max = 160
 let jugador : Player = { x: 0, y: 0 }
 let enemigo : Enemy = { x: 150, y: 70, dir_x: -1, dir_y: 1 }
 let moneda : GameState = { x: 100, y: 50 }
-let estado : Stats = { puntaje: 0, velocidad: 1 }
+let initial_time : Int = 60 * 30 
+let estado : Stats = { puntaje: 0, velocidad: 1, timer: initial_time } 
 let rand_state : RandomSeed = { seed: 123, frame_counter: 0 } // Inicializa la semilla
 let game_flags : GameStateFlags = { is_playing: true }
 
@@ -116,7 +118,8 @@ pub fn update() -> Unit {
   let gamepad = @wasm4.get_gamepad(index=1)
   let enemy_w = 8 // <-- ¡CAMBIA A 8! (para coincidir con el sprite 8x8)
   let enemy_h = 8 // <-- ¡CAMBIA A 8! 
-
+  let time_bonus_seconds = 5 // Segundos de bono
+  let time_bonus_frames = time_bonus_seconds * 60 // 300 frames
 
   if game_flags.is_playing {
 
@@ -142,7 +145,6 @@ pub fn update() -> Unit {
       rand_state.seed = offset
       enemigo.y += offset
     }
-
 
     // 2. MOVIMIENTO VERTICAL (ZIG-ZAG) Y REBOTE PURO
     let enemy_speed_y = 1
@@ -174,6 +176,7 @@ pub fn update() -> Unit {
       jugador.y + player_w > moneda.y {
       estado.velocidad += 1  
       estado.puntaje += 1
+      estado.timer += time_bonus_frames 
       moneda.x = get_safe_random_coord(rand_state.seed, coin_w)
       rand_state.seed = moneda.x
       moneda.y = get_safe_random_coord(rand_state.seed, coin_h)
@@ -189,15 +192,27 @@ pub fn update() -> Unit {
       game_flags.is_playing = false // ¡Game Over!
     }
 
-    // --- DIBUJO ---
-    //@wasm4.set_draw_colors(2)
-    //@wasm4.rect(jugador.x, jugador.y, player_w, player_h)
+    // --- LÓGICA DEL TEMPORIZADOR ---
+    estado.timer -= 1 // Resta 1 frame en cada tick
     
-    //@wasm4.set_draw_colors(4) // Nuevo color para el enemigo (ejemplo)
-    //@wasm4.rect(enemigo.x, enemigo.y, enemy_w, enemy_h) 
+    // Condición de Game Over por tiempo
+    if estado.timer <= 0 {
+      game_flags.is_playing = false // Forzar Game Over
+    }
 
-    //@wasm4.set_draw_colors(3)
-    //@wasm4.rect(moneda.x, moneda.y, coin_w, coin_h) 
+
+    //TEXTO PUNTAJE
+    let score_text = "SCORE: " + estado.puntaje.to_string()
+    @wasm4.set_draw_colors(4)
+    @wasm4.text(score_text, 4, 5) 
+
+    // DIBUJO DEL TIEMPO (Conversión a segundos)
+    let seconds_left = estado.timer / 60
+    let timer_text = "TIME: " + seconds_left.to_string()
+    
+    // Muestra el tiempo en pantalla (ej. esquina superior derecha)
+    @wasm4.set_draw_colors(4)
+    @wasm4.text(timer_text, 90, 5) // Coordenada ajustada
 
     // --- DIBUJO CON BLIT ---
     let blit_flag_none : @wasm4.BlitFlag = {
@@ -222,11 +237,6 @@ pub fn update() -> Unit {
     let coin_obj = @wasm4.sprite(coin_sprite.data)
     coin_obj.blit(moneda.x, moneda.y, coin_sprite.width, coin_sprite.height, blit_flag_none)
 
-    //TEXTO PUNTAJE
-    let score_text = "PUNTAJE: " + estado.puntaje.to_string()
-    @wasm4.set_draw_colors(4)
-    @wasm4.text(score_text, 5, 5) 
-
   } else {
     // PANTALLA DE GAME OVER
     @wasm4.set_draw_colors(1)
@@ -234,7 +244,7 @@ pub fn update() -> Unit {
     
     @wasm4.set_draw_colors(3)
     let final_score = "Puntaje: " + estado.puntaje.to_string()
-    @wasm4.text(final_score, 40, 90)
+    @wasm4.text(final_score, 36, 90)
 
 
     // --- LÓGICA DE PARPADEO ---
