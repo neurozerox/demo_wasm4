@@ -180,17 +180,18 @@ pub fn update() -> Unit {
 
       // Tono 1 (Bajo) - Rápido, ascendente
       @wasm4.tone(
-            (440, 550), // Frecuencia que sube
-            @wasm4.ADSR::new(5), // Duración muy corta (5 frames)
-            @wasm4.ADSRVolume::new(100), // Volumen máximo
-            @wasm4.ToneFlag::new() 
+          (440, 550), // 1. Frecuencia (Tupla)
+          @wasm4.ADSR::new(5), // 2. Duración (ADSR)
+          @wasm4.ADSRVolume::new(100), // 3. Volumen (ADSRVolume)
+          @wasm4.ToneFlag::new() // 4. Flags (Constructor sin argumentos)
       );
-      // Tono 2 (Alto) - Para el efecto 'ding'
+      
+      // Tono 2 (Alto)
       @wasm4.tone(
-            (880, 880), 
-            @wasm4.ADSR::new(5), 
-            @wasm4.ADSRVolume::new(100), 
-            @wasm4.ToneFlag::new() 
+          (880, 880), 
+          @wasm4.ADSR::new(5), 
+          @wasm4.ADSRVolume::new(100), 
+          @wasm4.ToneFlag::new()
       );
 
       //ejemplo sacado de github
