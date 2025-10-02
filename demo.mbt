@@ -100,10 +100,19 @@ let enemy_sprite : Sprite = {
 }
 
 let coin_sprite : Sprite = {
+  // Patrón de óvalo vertical suave 8x8 (8 bytes)
+  // Invita a ser recolectada, diferente del enemigo.
   data: [
-     0x00, 0x3c, 0x42, 0x42, 0x42, 0x42, 0x3c, 0x00
-  ], // 16 bytes total
-  width: 8,
+    0x00, // Fila 1: Totalmente transparente
+    0x18, // Fila 2:  .XX.  (Puntas más suaves)
+    0x24, // Fila 3: .X.X.
+    0x42, // Fila 4: X..X
+    0x42, // Fila 5: X..X
+    0x24, // Fila 6: .X.X.
+    0x18, // Fila 7:  .XX.
+    0x00  // Fila 8: Totalmente transparente
+  ],
+  width: 8, // Mantenemos 8x8 para simplicidad, pero con forma vertical
   height: 8,
 }
 
@@ -244,7 +253,7 @@ pub fn update() -> Unit {
     
     @wasm4.set_draw_colors(3)
     let final_score = "Puntaje: " + estado.puntaje.to_string()
-    @wasm4.text(final_score, 36, 90)
+    @wasm4.text(final_score, 38, 90)
 
 
     // --- LÓGICA DE PARPADEO ---
