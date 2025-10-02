@@ -103,14 +103,7 @@ let coin_sprite : Sprite = {
   // Patrón de óvalo vertical suave 8x8 (8 bytes)
   // Invita a ser recolectada, diferente del enemigo.
   data: [
-    0x00, // Fila 1: Totalmente transparente
-    0x18, // Fila 2:  .XX.  (Puntas más suaves)
-    0x24, // Fila 3: .X.X.
-    0x42, // Fila 4: X..X
-    0x42, // Fila 5: X..X
-    0x24, // Fila 6: .X.X.
-    0x18, // Fila 7:  .XX.
-    0x00  // Fila 8: Totalmente transparente
+    0xc3, 0x99, 0x85, 0x85, 0x85, 0x85, 0x81, 0xc3
   ],
   width: 8, // Mantenemos 8x8 para simplicidad, pero con forma vertical
   height: 8,
@@ -118,6 +111,11 @@ let coin_sprite : Sprite = {
 
 // CUERPO
 pub fn start() -> Unit {
+    // ESTABLECER LA PALETA DE COLORES
+  //@wasm4.set_palette(1, @wasm4.rgb(0xFFFFFF)) // Color 1: Contorno/Blanco
+  //@wasm4.set_palette(2, @wasm4.rgb(0x00FF00)) // Color 2: Jugador (Verde)
+  //@wasm4.set_palette(3, @wasm4.rgb(0xFFFF00)) // Color 3: Moneda (Amarillo)
+  //@wasm4.set_palette(4, @wasm4.rgb(0xFF0000)) // Color 4: Enemigo (Rojo)
 }
 pub fn update() -> Unit {
   let player_w = 16 // Ancho del jugador
@@ -129,15 +127,14 @@ pub fn update() -> Unit {
   let enemy_h = 8 // <-- ¡CAMBIA A 8! 
   let time_bonus_seconds = 5 // Segundos de bono
   let time_bonus_frames = time_bonus_seconds * 60 // 300 frames
-
   if game_flags.is_playing {
 
     // 1. MOVIMIENTO HORIZONTAL Y REBOTE (SUAVE)
     let current_player_speed = estado.velocidad
-    let enemy_horizontal_speed = current_player_speed + 1 
+    let enemy_horizontal_speed = current_player_speed + 1
 
     // Aplica el movimiento: (posición += dirección * velocidad)
-    enemigo.x += enemigo.dir_x * enemy_horizontal_speed 
+    enemigo.x += enemigo.dir_x * enemy_horizontal_speed
 
     // Lógica de REBOTE HORIZONTAL
     if enemigo.x + enemy_w >= screen_max {
@@ -148,7 +145,7 @@ pub fn update() -> Unit {
       rand_state.seed = offset // Actualiza la semilla
       enemigo.y += offset
     } else if enemigo.x <= 0 {
-      enemigo.dir_x = 1  // Toca el borde izquierdo, ahora va a la DERECHA
+      enemigo.dir_x = 1 // Toca el borde izquierdo, ahora va a la DERECHA
       // DESVÍO VERTICAL LEVE: Inyecta un pequeño cambio aleatorio en Y.
       let offset = next_random(rand_state.seed) % 8
       rand_state.seed = offset
@@ -157,14 +154,13 @@ pub fn update() -> Unit {
 
     // 2. MOVIMIENTO VERTICAL (ZIG-ZAG) Y REBOTE PURO
     let enemy_speed_y = 1
-    
     enemigo.y += enemigo.dir_y * enemy_speed_y // Aplica el zig-zag
 
     // Lógica de REBOTE VERTICAL CON RUIDO ALEATORIO
     if enemigo.y + enemy_h >= screen_max {
       enemigo.dir_y = -1 // Toca el fondo, ahora va ARRIBA
     } else if enemigo.y <= 0 {
-      enemigo.dir_y = 1  // Toca el techo, ahora va ABAJO
+      enemigo.dir_y = 1 // Toca el techo, ahora va ABAJO
     }
 
     // lógica de movimiento del jugador
@@ -179,13 +175,13 @@ pub fn update() -> Unit {
     }
 
     // Lógica de colisión monedas
-    if jugador.x < moneda.x + coin_w && 
-      jugador.x + player_w > moneda.x && 
-      jugador.y < moneda.y + coin_w && 
+    if jugador.x < moneda.x + coin_w &&
+      jugador.x + player_w > moneda.x &&
+      jugador.y < moneda.y + coin_w &&
       jugador.y + player_w > moneda.y {
-      estado.velocidad += 1  
+      estado.velocidad += 1
       estado.puntaje += 1
-      estado.timer += time_bonus_frames 
+      estado.timer += time_bonus_frames
       moneda.x = get_safe_random_coord(rand_state.seed, coin_w)
       rand_state.seed = moneda.x
       moneda.y = get_safe_random_coord(rand_state.seed, coin_h)
@@ -193,32 +189,30 @@ pub fn update() -> Unit {
     }
 
     // --- LÓGICA DE COLISIÓN CON ENEMIGO (Game Over) ---
-    if jugador.x < enemigo.x + enemy_w && 
-       jugador.x + player_w > enemigo.x && 
-       jugador.y < enemigo.y + enemy_h && 
-       jugador.y + player_h > enemigo.y {
-      
+    if jugador.x < enemigo.x + enemy_w &&
+      jugador.x + player_w > enemigo.x &&
+      jugador.y < enemigo.y + enemy_h &&
+      jugador.y + player_h > enemigo.y {
       game_flags.is_playing = false // ¡Game Over!
     }
 
     // --- LÓGICA DEL TEMPORIZADOR ---
     estado.timer -= 1 // Resta 1 frame en cada tick
-    
+
     // Condición de Game Over por tiempo
     if estado.timer <= 0 {
       game_flags.is_playing = false // Forzar Game Over
     }
 
-
     //TEXTO PUNTAJE
     let score_text = "SCORE: " + estado.puntaje.to_string()
     @wasm4.set_draw_colors(4)
-    @wasm4.text(score_text, 4, 5) 
+    @wasm4.text(score_text, 4, 5)
 
     // DIBUJO DEL TIEMPO (Conversión a segundos)
     let seconds_left = estado.timer / 60
     let timer_text = "TIME: " + seconds_left.to_string()
-    
+
     // Muestra el tiempo en pantalla (ej. esquina superior derecha)
     @wasm4.set_draw_colors(4)
     @wasm4.text(timer_text, 90, 5) // Coordenada ajustada
@@ -232,52 +226,65 @@ pub fn update() -> Unit {
     }
 
     // 1. Dibuja el JUGADOR
-    @wasm4.set_draw_colors(2)
+    @wasm4.set_draw_colors(0x02 | (0x00 << 2))
     let player_obj = @wasm4.sprite(player_sprite.data)
-    player_obj.blit(jugador.x, jugador.y, player_sprite.width, player_sprite.height, blit_flag_none)
-    
+    player_obj.blit(
+      jugador.x,
+      jugador.y,
+      player_sprite.width,
+      player_sprite.height,
+      blit_flag_none,
+    )
+
     // 2. Dibuja el ENEMIGO
-    @wasm4.set_draw_colors(4)
+    @wasm4.set_draw_colors(0x04 | (0x00 << 2)) 
     let enemy_obj = @wasm4.sprite(enemy_sprite.data)
-    enemy_obj.blit(enemigo.x, enemigo.y, enemy_sprite.width, enemy_sprite.height, blit_flag_none) 
+    enemy_obj.blit(
+      enemigo.x,
+      enemigo.y,
+      enemy_sprite.width,
+      enemy_sprite.height,
+      blit_flag_none,
+    )
 
     // 3. Dibuja la MONEDA
-    @wasm4.set_draw_colors(3) 
+    @wasm4.set_draw_colors(0x03 | (0x00 << 2)) 
     let coin_obj = @wasm4.sprite(coin_sprite.data)
-    coin_obj.blit(moneda.x, moneda.y, coin_sprite.width, coin_sprite.height, blit_flag_none)
-
+    coin_obj.blit(
+      moneda.x,
+      moneda.y,
+      coin_sprite.width,
+      coin_sprite.height,
+      blit_flag_none,
+    )
   } else {
     // PANTALLA DE GAME OVER
     @wasm4.set_draw_colors(1)
     @wasm4.text("GAME OVER!", 40, 70)
-    
     @wasm4.set_draw_colors(3)
     let final_score = "Puntaje: " + estado.puntaje.to_string()
     @wasm4.text(final_score, 38, 90)
 
-
     // --- LÓGICA DE PARPADEO ---
     rand_state.frame_counter += 1 // Suma 1 cada frame (60 veces por segundo)
 
-      // Resetea el contador para evitar overflow (no estrictamente necesario pero es buena práctica)
-    if rand_state.frame_counter > 90 { 
-        rand_state.frame_counter = 0 
+    // Resetea el contador para evitar overflow (no estrictamente necesario pero es buena práctica)
+    if rand_state.frame_counter > 90 {
+      rand_state.frame_counter = 0
     }
 
     // Si el contador de frames dividido por 30 (medio segundo) tiene un resto menor a 15 (un cuarto de segundo), dibujar.
-    if rand_state.frame_counter % 90 < 45 { 
+    if rand_state.frame_counter % 90 < 45 {
       @wasm4.text("Presiona Z", 40, 110)
       @wasm4.text("para reiniciar", 25, 120)
     }
 
     // --- LÓGICA DE REINICIO ---
     let gamepad = @wasm4.get_gamepad(index=1)
-    
+
     // Verifica si se presiona el botón 'Z' (BTN2/BUTTON_X/BUTTON_1 en la API)
     if gamepad.button_2 { // button_2 corresponde a 'Z' en WASM-4
-        reset_game() // Llama a la función de reinicio
+      reset_game() // Llama a la función de reinicio
     }
-
   }
-
 }
