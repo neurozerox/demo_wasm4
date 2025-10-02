@@ -100,12 +100,10 @@ let enemy_sprite : Sprite = {
 }
 
 let coin_sprite : Sprite = {
-  // Patrón de óvalo vertical suave 8x8 (8 bytes)
-  // Invita a ser recolectada, diferente del enemigo.
   data: [
     0xc3, 0x99, 0x85, 0x85, 0x85, 0x85, 0x81, 0xc3
   ],
-  width: 8, // Mantenemos 8x8 para simplicidad, pero con forma vertical
+  width: 8,
   height: 8,
 }
 
@@ -179,9 +177,29 @@ pub fn update() -> Unit {
       jugador.x + player_w > moneda.x &&
       jugador.y < moneda.y + coin_w &&
       jugador.y + player_w > moneda.y {
+
+      // Tono 1 (Bajo) - Rápido, ascendente
+      @wasm4.tone(
+            (440, 550), // Frecuencia que sube
+            @wasm4.ADSR::new(5), // Duración muy corta (5 frames)
+            @wasm4.ADSRVolume::new(100), // Volumen máximo
+            @wasm4.ToneFlag::new() 
+      );
+      // Tono 2 (Alto) - Para el efecto 'ding'
+      @wasm4.tone(
+            (880, 880), 
+            @wasm4.ADSR::new(5), 
+            @wasm4.ADSRVolume::new(100), 
+            @wasm4.ToneFlag::new() 
+      );
+
+      //ejemplo sacado de github
+      // @wasm4.tone((200,401),@wasm4.ADSR::new(10),@wasm4.ADSRVolume::new(100),@wasm4.ToneFlag::new(channel=Noise,mode=Duty_1_2,pan=Center));
+
       estado.velocidad += 1
       estado.puntaje += 1
       estado.timer += time_bonus_frames
+
       moneda.x = get_safe_random_coord(rand_state.seed, coin_w)
       rand_state.seed = moneda.x
       moneda.y = get_safe_random_coord(rand_state.seed, coin_h)
@@ -193,6 +211,13 @@ pub fn update() -> Unit {
       jugador.x + player_w > enemigo.x &&
       jugador.y < enemigo.y + enemy_h &&
       jugador.y + player_h > enemigo.y {
+
+    @wasm4.tone(
+        (100, 50),
+        @wasm4.ADSR::new(30),
+        @wasm4.ADSRVolume::new(100),
+        @wasm4.ToneFlag::new() 
+    );
       game_flags.is_playing = false // ¡Game Over!
     }
 
@@ -203,6 +228,22 @@ pub fn update() -> Unit {
     if estado.timer <= 0 {
       game_flags.is_playing = false // Forzar Game Over
     }
+
+
+    // --- LÓGICA DE URGENCIA (ÚLTIMOS 5 SEGUNDOS) ---
+    if estado.timer < 300 { // 5 segundos * 60 FPS = 300 frames
+        // Si el número de frame es par (ej. timer % 10 < 5), dibuja un color de pánico.
+        if estado.timer % 10 < 5 {
+            // Dibuja el fondo con un color de paleta diferente (ej. Color 4, que es Rojo)
+            @wasm4.set_draw_colors(0x04) 
+            @wasm4.rect(0, 0, screen_max, screen_max) // Pinta toda la pantalla
+        } else {
+            // Dibuja el fondo blanco/verde claro que usas
+            @wasm4.set_draw_colors(0x00) // Color 0 de la paleta (que es tu fondo)
+            @wasm4.rect(0, 0, screen_max, screen_max)
+        }
+    }
+
 
     //TEXTO PUNTAJE
     let score_text = "SCORE: " + estado.puntaje.to_string()
