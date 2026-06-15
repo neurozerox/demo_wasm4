@@ -42,6 +42,16 @@ let initial_time : Int = 60 * 30
 let estado : Stats = { puntaje: 0, velocidad: 1, timer: initial_time } 
 let rand_state : RandomSeed = { seed: 123, frame_counter: 0 } // Inicializa la semilla
 let game_flags : GameStateFlags = { is_playing: true }
+// EN TUS DECLARACIONES GLOBALES
+let bgm_volume : UInt = 5
+let bgm_duration : UInt = 3 
+let bgm_pulse_freq : UInt = 150 
+let bgm_pulse_cycle : Int = 100 
+fn make_tone_flag(channel_value: @wasm4.ToneChannel) -> @wasm4.ToneFlag {
+    // Retorna un ToneFlag donde el canal es el valor que pasamos.
+    @wasm4.ToneFlag::new(channel=channel_value) // La única sintaxis de constructor conocida
+}
+
 
 // FUNCIONES
 // Generador Pseudoaleatorio Simple (LCG)
@@ -114,6 +124,14 @@ pub fn start() -> Unit {
   //@wasm4.set_palette(2, @wasm4.rgb(0x00FF00)) // Color 2: Jugador (Verde)
   //@wasm4.set_palette(3, @wasm4.rgb(0xFFFF00)) // Color 3: Moneda (Amarillo)
   //@wasm4.set_palette(4, @wasm4.rgb(0xFF0000)) // Color 4: Enemigo (Rojo)
+  // LLAMADA SOSTENIDA DE MÚSICA DE FONDO (Si el binding lo permite)
+  // WASM-4 generalmente reproduce música de fondo haciendo una llamada larga y cíclica aquí.
+  //@wasm4.tone(
+  //    (bgm_pulse_freq, bgm_pulse_freq),
+  //    @wasm4.ADSR::new(0xFFFF), // Duración muy larga (casi infinita)
+  //    @wasm4.ADSRVolume::new(50), 
+  //    @wasm4.ToneFlag::new()
+  //);
 }
 pub fn update() -> Unit {
   let player_w = 16 // Ancho del jugador
@@ -125,7 +143,25 @@ pub fn update() -> Unit {
   let enemy_h = 8 // <-- ¡CAMBIA A 8! 
   let time_bonus_seconds = 5 // Segundos de bono
   let time_bonus_frames = time_bonus_seconds * 60 // 300 frames
+
   if game_flags.is_playing {
+    // Avanza el contador de frames cada tick mientras se juega,
+    // así el pulso del BGM se dispara cada bgm_pulse_cycle frames.
+    rand_state.frame_counter += 1
+
+    // ----------------------------------------------------
+    // LÓGICA DE MÚSICA DE FONDO (BGM - Pulso Único Constante)
+    // Se activa cada bgm_pulse_cycle frames
+    if rand_state.frame_counter % bgm_pulse_cycle == 0 {
+        // Usamos el CANAL DE RUIDO (3) para el BGM
+        @wasm4.tone(
+            (bgm_pulse_freq, bgm_pulse_freq), 
+            @wasm4.ADSR::new(bgm_duration), 
+            @wasm4.ADSRVolume::new(bgm_volume), 
+            make_tone_flag(@wasm4.ToneChannel::Noise) // <-- Usar el valor 3 (Ruido)
+        );
+    }
+    // ----------------------------------------------------
 
     // 1. MOVIMIENTO HORIZONTAL Y REBOTE (SUAVE)
     let current_player_speed = estado.velocidad
