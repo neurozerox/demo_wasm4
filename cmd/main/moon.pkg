@@ -1,0 +1,13 @@
+import {
+  "moonbitlang/wasm4",
+}
+
+options(
+  link: {
+    "wasm": {
+      "exports": [ "start", "update" ],
+      "heap-start-address": 6560,
+      "import-memory": { "module": "env", "name": "memory" },
+    },
+  },
+)
